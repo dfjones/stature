@@ -2,11 +2,32 @@
 
 (use 'lamina.core 'aleph.udp)
 
-(defn handler [ch]
-  (let [next-message (read-channel ch)]
-    (println next-message)))
+(def messages (atom []))
+(def max-message-count 10)
 
-(let [channel @(udp-socket {:port 10000})]
-  (receive-all channel #(println %)))
+(defn print-messages
+  [key identity old new]
+  (if (= (count new) 1)
+    (println key old "=>" new)))
+
+(add-watch messages :print-watch print-messages)
+
+(defn append-message [message]
+  (swap! messages
+    #(if (>= (count %1) max-message-count)
+       [%2]
+       (conj %1 %2))
+    message))
+
+(defn get-message-text [message]
+  (.trim (new String (.array (:message message)))))
+
+(def actions (comp append-message get-message-text))
+
+(defn start-socket []
+  (let [channel @(udp-socket {:port 10000})]
+    (map* actions channel)))
+
+(start-socket)
 
 
