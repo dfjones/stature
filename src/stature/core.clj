@@ -2,7 +2,7 @@
 
 (use 'lamina.core 'aleph.udp)
 
-(def messages (atom []))
+(def messages (ref []))
 (def max-message-count 10)
 
 (defn print-messages
@@ -13,11 +13,13 @@
 (add-watch messages :print-watch print-messages)
 
 (defn append-message [message]
-  (swap! messages
-    #(if (>= (count %1) max-message-count)
-       [%2]
-       (conj %1 %2))
-    message))
+  (dosync
+    (alter messages
+      #(if (>= (count %1) max-message-count)
+         [%2]
+         (conj %1 %2))
+      message)))
+
 
 (defn get-message-text [message]
   (.trim (new String (.array (:message message)))))
